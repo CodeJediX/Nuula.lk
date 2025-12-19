@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Dashboard | Nuula.lk</title>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link href="[https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap](https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap)" rel="stylesheet">
+    <script src="[https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2](https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2)"></script>
     <script src="config.js"></script>
     
     <style>
@@ -259,17 +259,27 @@
             const name = document.getElementById('s-name').value;
             const loc = document.getElementById('s-loc').value;
             const tel = document.getElementById('s-tel').value;
-            const logo = document.getElementById('s-logo-val').value || 'https://via.placeholder.com/100';
+            const logo = document.getElementById('s-logo-val').value || '[https://via.placeholder.com/100](https://via.placeholder.com/100)';
             
             if(!name) return alert('Name required');
-            await _supabase.from('shops').insert([{name, location:loc, tel, logo}]);
-            alert('Shop Added'); loadData();
+            
+            // ERROR HANDLING ADDED HERE
+            const { data, error } = await _supabase.from('shops').insert([{name, location:loc, tel, logo}]);
+            
+            if(error) {
+                alert("Error adding shop: " + error.message);
+                console.error(error);
+            } else {
+                alert('Shop Added'); 
+                loadData();
+            }
         }
         
         async function deleteShop(id) {
             if(confirm('Delete shop and all its items?')) {
-                await _supabase.from('shops').delete().eq('id', id);
-                loadData();
+                const { error } = await _supabase.from('shops').delete().eq('id', id);
+                if(error) alert(error.message);
+                else loadData();
             }
         }
 
@@ -296,7 +306,7 @@
             const price = document.getElementById('p-price').value;
             const demo = document.getElementById('p-demo').value;
             const cat = document.getElementById('p-cat').value;
-            const img = document.getElementById('p-img-val').value || 'https://via.placeholder.com/300';
+            const img = document.getElementById('p-img-val').value || '[https://via.placeholder.com/300](https://via.placeholder.com/300)';
             const sizes = document.getElementById('p-sizes').value.split(',').map(s=>s.trim()).filter(s=>s);
             const colors = document.getElementById('p-colors').value.split(',').map(s=>s.trim()).filter(s=>s);
             const desc = document.getElementById('p-desc').value;
@@ -305,23 +315,32 @@
 
             if(!name || !price) return alert('Name and Price required');
 
-            await _supabase.from('products').insert([{
+            // ERROR HANDLING ADDED HERE
+            const { data, error } = await _supabase.from('products').insert([{
                 shop_id: shopId, name, price: parseFloat(price), category: cat, demographic: demo, image: img, sizes, colors, description: desc, badge, is_out_of_stock: isOOS
             }]);
-            alert('Product Added'); loadData();
+            
+            if(error) {
+                alert("Error adding product: " + error.message);
+                console.error(error);
+            } else {
+                alert('Product Added'); 
+                loadData();
+            }
         }
 
         async function deleteProduct(id) {
             if(confirm('Delete item?')) {
-                await _supabase.from('products').delete().eq('id', id);
-                loadData();
+                const { error } = await _supabase.from('products').delete().eq('id', id);
+                if(error) alert(error.message);
+                else loadData();
             }
         }
         
-        // Function to toggle stock directly from table
         async function toggleStock(id, currentStatus) {
-            await _supabase.from('products').update({ is_out_of_stock: !currentStatus }).eq('id', id);
-            loadData();
+            const { error } = await _supabase.from('products').update({ is_out_of_stock: !currentStatus }).eq('id', id);
+            if(error) alert(error.message);
+            else loadData();
         }
 
         function renderProducts() {

@@ -1,4 +1,4 @@
-// config.js
+
 const CONFIG = {
     // Your Project URL
     SUPABASE_URL: 'https://xoslecimcqotvnokdhde.supabase.co',
