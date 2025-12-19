@@ -367,7 +367,22 @@
 
                 // Shops
                 let shopsHtml = `<div class="container" id="section-shops"><h2 class="section-title" data-lang="sellers">${this.t('sellers')}</h2><div class="grid-container">
-                    ${shops.map(s => `<div class="shop-card" onclick="app.renderShopPage(${s.id})"><img src="${s.logo}" class="shop-logo"><div class="shop-name">${s.name}</div><span style="color:#666;">${s.location}</span><br><button class="btn btn-outline" style="margin-top:10px; font-size:0.8rem;">${this.t('visit')}</button></div>`).join('')}
+                    ${shops.map(s => {
+                        // Location Button Logic (Checks for map_link)
+                        const mapBtn = s.map_link 
+                            ? `<a href="${s.map_link}" target="_blank" class="btn btn-outline" style="margin-top:10px; margin-right:5px; padding: 8px 12px; font-size:0.8rem;" onclick="event.stopPropagation()"><i class="fa-solid fa-location-dot"></i></a>` 
+                            : '';
+                        
+                        return `<div class="shop-card" onclick="app.renderShopPage(${s.id})">
+                                    <img src="${s.logo}" class="shop-logo">
+                                    <div class="shop-name">${s.name}</div>
+                                    <span style="color:#666;">${s.location}</span><br>
+                                    <div style="display:flex; justify-content:center; align-items:center;">
+                                        ${mapBtn}
+                                        <button class="btn btn-outline" style="margin-top:10px; font-size:0.8rem;">${this.t('visit')}</button>
+                                    </div>
+                                </div>`;
+                    }).join('')}
                 </div></div>`;
 
                 // Advanced Collection Filter
@@ -672,7 +687,7 @@
                 window.scrollTo(0,0);
                 const waLink = `https://wa.me/${shop.tel.replace(/\D/g,'')}`;
                 
-                // Location Button Logic
+                // Location Button Logic (for detail page)
                 const mapBtn = shop.map_link 
                     ? `<a href="${shop.map_link}" target="_blank" class="btn btn-outline" style="margin-right:10px;"><i class="fa-solid fa-map-location-dot"></i> Directions</a>` 
                     : '';
