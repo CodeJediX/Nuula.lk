@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Dashboard | Nuula.lk</title>
-    <link href="[https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap](https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap)" rel="stylesheet">
-    <script src="[https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2](https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2)"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="config.js"></script>
     
     <style>
@@ -15,6 +15,7 @@
         
         .sidebar { width: 250px; background: var(--primary); color: white; padding: 20px; display: flex; flex-direction: column; }
         .logo { font-size: 1.5rem; font-weight: 700; margin-bottom: 40px; color: white; text-decoration: none; }
+        .logo span { color: var(--accent); }
         .menu-item { padding: 12px; margin-bottom: 5px; cursor: pointer; border-radius: 5px; color: #aaa; transition: 0.2s; }
         .menu-item:hover, .menu-item.active { background: rgba(255,255,255,0.1); color: var(--accent); }
         
@@ -49,9 +50,14 @@
         .view { display: none; }
         .view.active { display: block; }
         .preview-img { width: 100px; height: 100px; object-fit: cover; border: 1px solid #ddd; margin-top: 10px; display: none; }
+        
+        /* Loading Overlay */
+        #loader { display: none; position: fixed; inset: 0; background: rgba(255,255,255,0.8); z-index: 999; justify-content: center; align-items: center; font-weight: bold; }
     </style>
 </head>
 <body>
+
+    <div id="loader">Processing...</div>
 
     <div class="sidebar">
         <a href="index.html" class="logo">Nuula<span>.lk</span></a>
@@ -212,6 +218,10 @@
         let shops = [];
         let products = [];
 
+        function loading(show) {
+            document.getElementById('loader').style.display = show ? 'flex' : 'none';
+        }
+
         function showView(id) {
             document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
             document.querySelectorAll('.menu-item').forEach(m => m.classList.remove('active'));
@@ -220,19 +230,27 @@
         }
 
         async function loadData() {
-            let { data: s } = await _supabase.from('shops').select('*');
-            let { data: p } = await _supabase.from('products').select('*').order('id', {ascending:false});
+            loading(true);
+            let { data: s, error: sErr } = await _supabase.from('shops').select('*').order('id', {ascending: true});
+            let { data: p, error: pErr } = await _supabase.from('products').select('*').order('id', {ascending: false});
+            
+            if(sErr) console.error(sErr);
+            if(pErr) console.error(pErr);
+
             shops = s || [];
             products = p || [];
+            
             renderShops();
             renderProducts();
             populateShopSelect();
+            loading(false);
         }
 
         // --- HELPER: FILE TO BASE64 ---
         function handleFile(input, valId, prevId) {
             const file = input.files[0];
             if(file) {
+                // Warning: Supabase rows have a size limit. Large images might fail.
                 const reader = new FileReader();
                 reader.onload = function(e) {
                     document.getElementById(valId).value = e.target.result;
@@ -259,25 +277,28 @@
             const name = document.getElementById('s-name').value;
             const loc = document.getElementById('s-loc').value;
             const tel = document.getElementById('s-tel').value;
-            const logo = document.getElementById('s-logo-val').value || '[https://via.placeholder.com/100](https://via.placeholder.com/100)';
+            const logo = document.getElementById('s-logo-val').value || 'https://via.placeholder.com/100';
             
             if(!name) return alert('Name required');
             
-            // ERROR HANDLING ADDED HERE
+            loading(true);
             const { data, error } = await _supabase.from('shops').insert([{name, location:loc, tel, logo}]);
+            loading(false);
             
             if(error) {
-                alert("Error adding shop: " + error.message);
-                console.error(error);
+                alert("Error: " + error.message);
             } else {
                 alert('Shop Added'); 
+                document.getElementById('s-name').value = ""; // Clear input
                 loadData();
             }
         }
         
         async function deleteShop(id) {
             if(confirm('Delete shop and all its items?')) {
+                loading(true);
                 const { error } = await _supabase.from('shops').delete().eq('id', id);
+                loading(false);
                 if(error) alert(error.message);
                 else loadData();
             }
@@ -287,7 +308,7 @@
             const tbody = document.querySelector('#shops-table tbody');
             tbody.innerHTML = shops.map(s => `
                 <tr>
-                    <td><img src="${s.logo}" style="width:30px; height:30px; border-radius:50%;"></td>
+                    <td><img src="${s.logo}" style="width:30px; height:30px; border-radius:50%; object-fit:cover;"></td>
                     <td>${s.name}</td>
                     <td>${s.location}</td>
                     <td><button class="btn btn-delete" onclick="deleteShop(${s.id})">Delete</button></td>
@@ -306,39 +327,44 @@
             const price = document.getElementById('p-price').value;
             const demo = document.getElementById('p-demo').value;
             const cat = document.getElementById('p-cat').value;
-            const img = document.getElementById('p-img-val').value || '[https://via.placeholder.com/300](https://via.placeholder.com/300)';
-            const sizes = document.getElementById('p-sizes').value.split(',').map(s=>s.trim()).filter(s=>s);
-            const colors = document.getElementById('p-colors').value.split(',').map(s=>s.trim()).filter(s=>s);
+            const img = document.getElementById('p-img-val').value || 'https://via.placeholder.com/300';
+            const sizes = document.getElementById('p-sizes').value.split(',').map(s=>s.trim()).filter(s=>s!=='');
+            const colors = document.getElementById('p-colors').value.split(',').map(s=>s.trim()).filter(s=>s!=='');
             const desc = document.getElementById('p-desc').value;
             const badge = document.getElementById('p-badge').value;
             const isOOS = document.getElementById('p-oos').checked;
 
             if(!name || !price) return alert('Name and Price required');
 
-            // ERROR HANDLING ADDED HERE
+            loading(true);
             const { data, error } = await _supabase.from('products').insert([{
                 shop_id: shopId, name, price: parseFloat(price), category: cat, demographic: demo, image: img, sizes, colors, description: desc, badge, is_out_of_stock: isOOS
             }]);
+            loading(false);
             
             if(error) {
                 alert("Error adding product: " + error.message);
-                console.error(error);
             } else {
                 alert('Product Added'); 
+                document.getElementById('p-name').value = ""; // Clear main input
                 loadData();
             }
         }
 
         async function deleteProduct(id) {
             if(confirm('Delete item?')) {
+                loading(true);
                 const { error } = await _supabase.from('products').delete().eq('id', id);
+                loading(false);
                 if(error) alert(error.message);
                 else loadData();
             }
         }
         
         async function toggleStock(id, currentStatus) {
+            loading(true);
             const { error } = await _supabase.from('products').update({ is_out_of_stock: !currentStatus }).eq('id', id);
+            loading(false);
             if(error) alert(error.message);
             else loadData();
         }
@@ -349,7 +375,7 @@
                 const s = shops.find(x => x.id === p.shop_id) || {name:'?'};
                 return `
                 <tr>
-                    <td><img src="${p.image}" style="width:30px;"></td>
+                    <td><img src="${p.image}" style="width:30px; height:30px; object-fit:cover;"></td>
                     <td>${p.name}</td>
                     <td>${s.name}</td>
                     <td><span style="color:${p.is_out_of_stock?'red':'green'}; font-weight:bold; cursor:pointer;" onclick="toggleStock(${p.id}, ${p.is_out_of_stock})">${p.is_out_of_stock ? 'Out of Stock' : 'In Stock'}</span></td>

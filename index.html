@@ -17,7 +17,7 @@
         /* --- THEME VARIABLES --- */
         :root {
             --primary: #1a1a1a;         
-            --secondary: #FFFFFF;       
+            --secondary: #FFFFFF;        
             --accent: #FF6B6B;          
             --bg-light: #F8F9FA;        
             --bg-card: #FFFFFF;
@@ -301,10 +301,10 @@
             },
 
             loadData: async function() {
-                let { data: sData } = await _supabase.from('shops').select('*');
-                shops = sData || [];
-                let { data: pData } = await _supabase.from('products').select('*').order('id', {ascending: false});
-                products = pData || [];
+                let { data: s } = await _supabase.from('shops').select('*');
+                shops = s || [];
+                let { data: p } = await _supabase.from('products').select('*').order('id', {ascending: false});
+                products = p || [];
             },
 
             // --- LANGUAGE LOGIC ---
