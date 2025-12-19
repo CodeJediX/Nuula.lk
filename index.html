@@ -55,7 +55,7 @@
         .btn-outline { border: 1px solid var(--primary); background: transparent; color: var(--primary); }
         .btn-outline:hover { background: var(--primary); color: white; }
         
-        .btn-whatsapp { background: #25D366; color: white; border-radius: 50px; font-weight: 600; }
+        .btn-whatsapp { background: #25D366; color: white; border-radius: 50px; font-weight: 600; border: none; }
         .btn-whatsapp:hover { background: #1ebc57; box-shadow: 0 5px 15px rgba(37, 211, 102, 0.3); }
 
         .btn-wishlist { background: #fff; border: 1px solid #ddd; color: var(--text-muted); }
@@ -86,7 +86,7 @@
 
         /* CARDS */
         .grid-container { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 30px; padding-bottom: 60px; }
-        .shop-card { background: var(--bg-card); padding: 30px 20px; border-radius: var(--radius); text-align: center; border: 1px solid var(--border); transition: var(--transition); cursor: pointer; }
+        .shop-card { background: var(--bg-card); padding: 30px 20px; border-radius: var(--radius); text-align: center; border: 1px solid var(--border); transition: var(--transition); cursor: pointer; position: relative; }
         .shop-card:hover { transform: translateY(-5px); box-shadow: var(--shadow); border-color: var(--accent); }
         .shop-logo { width: 90px; height: 90px; border-radius: 50%; object-fit: cover; margin-bottom: 15px; border: 3px solid var(--bg-light); }
         
@@ -368,18 +368,23 @@
                 // Shops
                 let shopsHtml = `<div class="container" id="section-shops"><h2 class="section-title" data-lang="sellers">${this.t('sellers')}</h2><div class="grid-container">
                     ${shops.map(s => {
-                        // Location Button Logic (Checks for map_link)
+                        const waLink = `https://wa.me/${s.tel.replace(/\D/g,'')}`;
+                        
+                        // Location Button (only if link exists)
                         const mapBtn = s.map_link 
-                            ? `<a href="${s.map_link}" target="_blank" class="btn btn-outline" style="margin-top:10px; margin-right:5px; padding: 8px 12px; font-size:0.8rem;" onclick="event.stopPropagation()"><i class="fa-solid fa-location-dot"></i></a>` 
+                            ? `<a href="${s.map_link}" target="_blank" class="btn btn-outline" style="width:35px; height:35px; padding:0; display:inline-flex; justify-content:center; align-items:center; border-radius:50%;" onclick="event.stopPropagation()" title="Location"><i class="fa-solid fa-location-dot"></i></a>` 
                             : '';
                         
+                        // Chat Button
+                        const chatBtn = `<a href="${waLink}" target="_blank" class="btn btn-whatsapp" style="font-size:0.8rem; padding: 6px 15px;" onclick="event.stopPropagation()"><i class="fa-brands fa-whatsapp"></i> Chat</a>`;
+
                         return `<div class="shop-card" onclick="app.renderShopPage(${s.id})">
                                     <img src="${s.logo}" class="shop-logo">
                                     <div class="shop-name">${s.name}</div>
-                                    <span style="color:#666;">${s.location}</span><br>
-                                    <div style="display:flex; justify-content:center; align-items:center;">
+                                    <span style="color:#666; font-size:0.9rem;">${s.location}</span><br>
+                                    <div style="display:flex; justify-content:center; align-items:center; gap:10px; margin-top:15px;">
                                         ${mapBtn}
-                                        <button class="btn btn-outline" style="margin-top:10px; font-size:0.8rem;">${this.t('visit')}</button>
+                                        ${chatBtn}
                                     </div>
                                 </div>`;
                     }).join('')}
