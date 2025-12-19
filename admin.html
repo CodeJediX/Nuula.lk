@@ -9,7 +9,7 @@
     <script src="config.js"></script>
     
     <style>
-        :root { --primary: #1a1a1a; --accent: #FF6B6B; --bg: #f3f4f6; }
+        :root { --primary: #1a1a1a; --accent: #FF6B6B; --bg: #f3f4f6; --blue: #3b82f6; --gray: #6b7280; }
         body { font-family: 'Poppins', sans-serif; background: var(--bg); display: flex; height: 100vh; margin: 0; }
         * { box-sizing: border-box; }
         
@@ -34,7 +34,9 @@
         
         .btn { padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; background: var(--primary); color: white; font-weight: 500; }
         .btn:hover { background: var(--accent); }
-        .btn-delete { background: #fee2e2; color: #ef4444; }
+        .btn-delete { background: #fee2e2; color: #ef4444; padding: 6px 12px; font-size: 0.8rem; }
+        .btn-edit { background: #dbeafe; color: var(--blue); padding: 6px 12px; font-size: 0.8rem; margin-right: 5px; }
+        .btn-cancel { background: var(--gray); margin-left: 10px; display: none; }
         
         /* Toggle Switch */
         .switch { position: relative; display: inline-block; width: 50px; height: 24px; }
@@ -95,7 +97,7 @@
         <div id="view-products" class="view">
             <h2>👗 Manage Inventory</h2>
             <div class="card">
-                <h3>Add Product</h3>
+                <h3 id="form-title">Add Product</h3>
                 <div class="form-group" style="margin-bottom:15px;">
                     <label>Select Shop Owner</label>
                     <select id="p-shop-select"></select>
@@ -201,7 +203,11 @@
                     <label>Description</label>
                     <textarea id="p-desc" rows="3"></textarea>
                 </div>
-                <button class="btn" onclick="addProduct()">Add Item</button>
+                
+                <div>
+                    <button id="btn-save" class="btn" onclick="saveProduct()">Add Item</button>
+                    <button id="btn-cancel" class="btn btn-cancel" onclick="cancelEdit()">Cancel Update</button>
+                </div>
             </div>
 
             <div class="card">
@@ -217,6 +223,7 @@
         const _supabase = createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_KEY);
         let shops = [];
         let products = [];
+        let editingProductId = null; // Track which product is being edited
 
         function loading(show) {
             document.getElementById('loader').style.display = show ? 'flex' : 'none';
@@ -318,16 +325,20 @@
         // --- PRODUCT LOGIC ---
         function populateShopSelect() {
             const sel = document.getElementById('p-shop-select');
+            // Keep existing selection if editing
+            const currentVal = sel.value; 
             sel.innerHTML = shops.map(s => `<option value="${s.id}">${s.name} (${s.location})</option>`).join('');
+            if(currentVal) sel.value = currentVal;
         }
 
-        async function addProduct() {
+        // Combined function for Add and Update
+        async function saveProduct() {
             const shopId = document.getElementById('p-shop-select').value;
             const name = document.getElementById('p-name').value;
             const price = document.getElementById('p-price').value;
             const demo = document.getElementById('p-demo').value;
             const cat = document.getElementById('p-cat').value;
-            const img = document.getElementById('p-img-val').value || 'https://via.placeholder.com/300';
+            let img = document.getElementById('p-img-val').value;
             const sizes = document.getElementById('p-sizes').value.split(',').map(s=>s.trim()).filter(s=>s!=='');
             const colors = document.getElementById('p-colors').value.split(',').map(s=>s.trim()).filter(s=>s!=='');
             const desc = document.getElementById('p-desc').value;
@@ -336,19 +347,91 @@
 
             if(!name || !price) return alert('Name and Price required');
 
-            loading(true);
-            const { data, error } = await _supabase.from('products').insert([{
+            // If img is empty during update, it means user kept the old one. We need logic to handle that inside specific flow, 
+            // but here we just check if it's empty string.
+            if(!img) img = 'https://via.placeholder.com/300';
+
+            const payload = {
                 shop_id: shopId, name, price: parseFloat(price), category: cat, demographic: demo, image: img, sizes, colors, description: desc, badge, is_out_of_stock: isOOS
-            }]);
+            };
+
+            loading(true);
+            let error = null;
+
+            if(editingProductId) {
+                // UPDATE
+                const { error: updateError } = await _supabase.from('products').update(payload).eq('id', editingProductId);
+                error = updateError;
+            } else {
+                // INSERT
+                const { error: insertError } = await _supabase.from('products').insert([payload]);
+                error = insertError;
+            }
+
             loading(false);
             
             if(error) {
-                alert("Error adding product: " + error.message);
+                alert("Error saving product: " + error.message);
             } else {
-                alert('Product Added'); 
-                document.getElementById('p-name').value = ""; // Clear main input
+                alert(editingProductId ? 'Product Updated' : 'Product Added'); 
+                cancelEdit(); // Reset form
                 loadData();
             }
+        }
+
+        function editProduct(id) {
+            const p = products.find(prod => prod.id === id);
+            if(!p) return;
+
+            editingProductId = id;
+
+            // Populate Form
+            document.getElementById('p-shop-select').value = p.shop_id;
+            document.getElementById('p-name').value = p.name;
+            document.getElementById('p-price').value = p.price;
+            document.getElementById('p-demo').value = p.demographic;
+            document.getElementById('p-cat').value = p.category;
+            
+            document.getElementById('p-sizes').value = p.sizes ? p.sizes.join(', ') : '';
+            document.getElementById('p-colors').value = p.colors ? p.colors.join(', ') : '';
+            
+            document.getElementById('p-desc').value = p.description;
+            document.getElementById('p-badge').value = p.badge;
+            document.getElementById('p-oos').checked = p.is_out_of_stock;
+
+            // Image handling
+            document.getElementById('p-img-val').value = p.image;
+            const imgPreview = document.getElementById('p-img-preview');
+            imgPreview.src = p.image;
+            imgPreview.style.display = 'block';
+
+            // Change Interface to Edit Mode
+            document.getElementById('form-title').innerText = "Edit Product";
+            document.getElementById('btn-save').innerText = "Update Item";
+            document.getElementById('btn-cancel').style.display = "inline-block";
+            
+            // Scroll to form
+            document.querySelector('.card').scrollIntoView({behavior: 'smooth'});
+        }
+
+        function cancelEdit() {
+            editingProductId = null;
+            
+            // Clear inputs
+            document.getElementById('p-name').value = "";
+            document.getElementById('p-price').value = "";
+            document.getElementById('p-sizes').value = "";
+            document.getElementById('p-colors').value = "";
+            document.getElementById('p-desc').value = "";
+            document.getElementById('p-badge').value = "";
+            document.getElementById('p-oos').checked = false;
+            document.getElementById('p-img-val').value = "";
+            document.getElementById('p-img-preview').style.display = "none";
+            
+            // Reset UI
+            document.getElementById('form-title').innerText = "Add Product";
+            document.getElementById('btn-save').innerText = "Add Item";
+            document.getElementById('btn-cancel').style.display = "none";
         }
 
         async function deleteProduct(id) {
@@ -357,7 +440,10 @@
                 const { error } = await _supabase.from('products').delete().eq('id', id);
                 loading(false);
                 if(error) alert(error.message);
-                else loadData();
+                else {
+                    if(editingProductId === id) cancelEdit(); // If deleting the item currently being edited
+                    loadData();
+                }
             }
         }
         
@@ -379,7 +465,10 @@
                     <td>${p.name}</td>
                     <td>${s.name}</td>
                     <td><span style="color:${p.is_out_of_stock?'red':'green'}; font-weight:bold; cursor:pointer;" onclick="toggleStock(${p.id}, ${p.is_out_of_stock})">${p.is_out_of_stock ? 'Out of Stock' : 'In Stock'}</span></td>
-                    <td><button class="btn btn-delete" onclick="deleteProduct(${p.id})">Delete</button></td>
+                    <td>
+                        <button class="btn btn-edit" onclick="editProduct(${p.id})">Edit</button>
+                        <button class="btn btn-delete" onclick="deleteProduct(${p.id})">Delete</button>
+                    </td>
                 </tr>`;
             }).join('');
         }
