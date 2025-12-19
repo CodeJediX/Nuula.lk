@@ -66,11 +66,16 @@
         .nav-flex { display: flex; justify-content: space-between; align-items: center; }
         .logo { font-family: 'Playfair Display', serif; font-size: 1.8rem; font-weight: 700; color: var(--primary); letter-spacing: -0.5px; }
         .logo span { color: var(--accent); }
+        
         .nav-links { display: flex; gap: 30px; align-items: center; }
         .nav-item { font-weight: 500; cursor: pointer; position: relative; font-size: 0.9rem; text-transform: uppercase; }
         .nav-item:hover, .nav-item.active { color: var(--accent); }
+        
         .icon-btn { position: relative; font-size: 1.2rem; cursor: pointer; margin-left: 15px; }
         .badge { position: absolute; top: -8px; right: -8px; background: var(--accent); color: white; font-size: 0.7rem; width: 18px; height: 18px; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-weight: bold; }
+
+        /* LANGUAGE SELECTOR */
+        .lang-select { padding: 5px 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.8rem; cursor: pointer; margin-left: 15px; background: #fff; }
 
         /* SLIDESHOW */
         .slideshow-container { width: 100%; height: 500px; position: relative; overflow: hidden; margin-bottom: 60px; }
@@ -99,9 +104,22 @@
         .oos-overlay { position: absolute; inset: 0; background: rgba(255,255,255,0.7); z-index: 1; display: flex; justify-content: center; align-items: center; }
         .oos-text { background: black; color: white; padding: 5px 15px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; }
 
-        /* FILTERS */
-        .filter-bar { background: var(--bg-card); padding: 20px; margin-bottom: 40px; display: flex; flex-wrap: wrap; gap: 15px; border: 1px solid var(--border); align-items: center; border-radius: var(--radius); }
-        .filter-input { padding: 10px 15px; border: 1px solid var(--border); outline: none; font-family: inherit; border-radius: 4px; flex: 1; min-width: 150px; }
+        /* ADVANCED FILTERS */
+        .filter-bar { 
+            background: var(--bg-card); 
+            padding: 25px; 
+            margin-bottom: 40px; 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); 
+            gap: 15px; 
+            border: 1px solid var(--border); 
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+        }
+        .filter-group { display: flex; flex-direction: column; gap: 5px; }
+        .filter-label { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: var(--text-muted); }
+        .filter-input { padding: 12px; border: 1px solid var(--border); outline: none; font-family: inherit; border-radius: 6px; width: 100%; font-size: 0.9rem; }
+        .price-row { display: flex; gap: 10px; }
 
         /* MODAL */
         .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 2000; justify-content: center; align-items: center; padding: 20px; backdrop-filter: blur(5px); }
@@ -136,6 +154,7 @@
             .modal-content { flex-direction: column; }
             .modal-img { width: 100%; height: 300px; }
             .modal-info { width: 100%; padding: 20px; }
+            .filter-bar { grid-template-columns: 1fr; }
         }
     </style>
 </head>
@@ -145,11 +164,17 @@
         <div class="container nav-flex">
             <a href="#" class="logo" onclick="app.renderHome()">Nuula<span>.lk</span></a>
             <div class="nav-links">
-                <div class="nav-item" onclick="app.renderHome()">Home</div>
-                <div class="nav-item" onclick="app.scrollTo('section-shops')">Shops</div>
-                <div class="nav-item" onclick="app.scrollTo('section-collection')">Collection</div>
+                <div class="nav-item" onclick="app.renderHome()" data-lang="home">Home</div>
+                <div class="nav-item" onclick="app.scrollTo('section-shops')" data-lang="shops">Shops</div>
+                <div class="nav-item" onclick="app.scrollTo('section-collection')" data-lang="collection">Collection</div>
             </div>
-            <div style="display:flex;">
+            <div style="display:flex; align-items:center;">
+                <select id="lang-switcher" class="lang-select" onchange="app.setLanguage(this.value)">
+                    <option value="en">English</option>
+                    <option value="si">සිංහල</option>
+                    <option value="ta">தமிழ்</option>
+                </select>
+
                 <div class="icon-btn" onclick="app.toggleDrawer('wishlist')">
                     <i class="fa-regular fa-heart"></i>
                     <div class="badge" id="wish-count">0</div>
@@ -167,8 +192,8 @@
     <section id="section-about" style="background: white; padding: 80px 0; text-align: center; border-top: 1px solid var(--border);">
         <div class="container" style="max-width: 800px;">
             <h2 class="logo" style="font-size: 2.5rem; margin-bottom: 15px;">Nuula<span>.lk</span></h2>
-            <h3>Supporting Local Fashion</h3>
-            <p style="color:#666; margin-top:20px;">
+            <h3 data-lang="about_title">Supporting Local Fashion</h3>
+            <p style="color:#666; margin-top:20px;" data-lang="about_text">
                 Nuula.lk connects Sri Lanka's finest clothing sellers directly with you. 
                 Discover unique styles from shops across the island and order easily via WhatsApp.
             </p>
@@ -178,7 +203,7 @@
     <footer>
         <div class="container">
             <p>© 2025 Nuula.lk. All Rights Reserved.</p>
-            <a href="admin.html" style="color: #888; font-size: 0.8rem; margin-top: 20px; display: inline-block;">Admin Login</a>
+            <a href="admin.html" style="color: #888; font-size: 0.8rem; margin-top: 20px; display: inline-block;" data-lang="admin_login">Admin Login</a>
         </div>
     </footer>
 
@@ -189,12 +214,12 @@
     <div class="drawer-overlay" onclick="app.closeDrawers()"></div>
 
     <div class="drawer" id="cart-drawer">
-        <div class="drawer-header"><h3>Your Bag</h3><span onclick="app.closeDrawers()" style="cursor:pointer; font-size:1.5rem;">×</span></div>
+        <div class="drawer-header"><h3 data-lang="cart_title">Your Bag</h3><span onclick="app.closeDrawers()" style="cursor:pointer; font-size:1.5rem;">×</span></div>
         <div class="drawer-body" id="cart-body"></div>
     </div>
 
     <div class="drawer" id="wishlist-drawer">
-        <div class="drawer-header"><h3>Wishlist (Out of Stock)</h3><span onclick="app.closeDrawers()" style="cursor:pointer; font-size:1.5rem;">×</span></div>
+        <div class="drawer-header"><h3 data-lang="wish_title">Wishlist</h3><span onclick="app.closeDrawers()" style="cursor:pointer; font-size:1.5rem;">×</span></div>
         <div class="drawer-body" id="wishlist-body"></div>
     </div>
 
@@ -206,12 +231,73 @@
         let products = [];
         let cart = JSON.parse(localStorage.getItem('nuula_cart')) || [];
         let wishlist = JSON.parse(localStorage.getItem('nuula_wishlist')) || [];
+        let currentLang = localStorage.getItem('nuula_lang') || 'en';
+
+        // --- TRANSLATIONS ---
+        const translations = {
+            en: {
+                home: "Home", shops: "Shops", collection: "Collection",
+                sellers: "Our Sellers", visit: "Visit Shop",
+                latest: "Latest Collection",
+                search_ph: "Search items...",
+                all_demo: "Everyone", men: "Men", women: "Women", kids: "Kids",
+                all_cat: "All Categories",
+                all_loc: "All Locations", all_size: "All Sizes", all_color: "All Colors",
+                price_min: "Min Price", price_max: "Max Price",
+                view_item: "View Item", add_cart: "Add to Bag", add_wish: "Add to Wishlist",
+                sold_out: "Sold Out", in_stock: "Back in Stock",
+                cart_title: "Your Bag", wish_title: "Wishlist", cart_empty: "Bag is empty",
+                about_title: "Supporting Local Fashion",
+                about_text: "Nuula.lk connects Sri Lanka's finest clothing sellers directly with you. Discover unique styles from shops across the island.",
+                admin_login: "Admin Login",
+                filter_search: "Search", filter_demo: "For Whom", filter_cat: "Category", 
+                filter_price: "Price Range", filter_loc: "Location", filter_size: "Size", filter_color: "Color"
+            },
+            si: {
+                home: "මුල් පිටුව", shops: "වෙළඳසැල්", collection: "එකතුව",
+                sellers: "අපගේ විකුණුම්කරුවන්", visit: "වෙළඳසැලට යන්න",
+                latest: "නව එකතුව",
+                search_ph: "සොයන්න...",
+                all_demo: "සියලු දෙනාටම", men: "පිරිමි", women: "කාන්තා", kids: "ළමා",
+                all_cat: "සියලු වර්ග",
+                all_loc: "සියලු ප්‍රදේශ", all_size: "සියලු ප්‍රමාණ", all_color: "සියලු වර්ණ",
+                price_min: "අවම මිල", price_max: "උපරිම මිල",
+                view_item: "විස්තර බලන්න", add_cart: "බෑගයට එක්කරන්න", add_wish: "පැතුම් ලැයිස්තුවට",
+                sold_out: "විකිණී අවසන්", in_stock: "නැවත තොග ඇත",
+                cart_title: "ඔබගේ බෑගය", wish_title: "පැතුම් ලැයිස්තුව", cart_empty: "බෑගය හිස්ය",
+                about_title: "දේශීය විලාසිතා සඳහා සහාය",
+                about_text: "Nuula.lk ශ්‍රී ලංකාවේ හොඳම ඇඳුම් නිර්මාණකරුවන් ඔබ වෙත ගෙන එයි. දිවයින පුරා විසිරී ඇති වෙළඳසැල් වලින් පහසුවෙන් WhatsApp හරහා ඇණවුම් කරන්න.",
+                admin_login: "පරිපාලක පිවිසුම",
+                filter_search: "සොයන්න", filter_demo: "කා සඳහාද", filter_cat: "වර්ගය", 
+                filter_price: "මිල පරාසය", filter_loc: "ස්ථානය", filter_size: "ප්‍රමාණය", filter_color: "වර්ණය"
+            },
+            ta: {
+                home: "முகப்பு", shops: "கடைகள்", collection: "தொகுப்பு",
+                sellers: "எங்கள் விற்பனையாளர்கள்", visit: "கடைக்குச் செல்லவும்",
+                latest: "புதிய தொகுப்பு",
+                search_ph: "தேடுக...",
+                all_demo: "அனைவருக்கும்", men: "ஆண்கள்", women: "பெண்கள்", kids: "குழந்தைகள்",
+                all_cat: "அனைத்து வகைகள்",
+                all_loc: "அனைத்து இடங்கள்", all_size: "அனைத்து அளவுகள்", all_color: "அனைத்து நிறங்கள்",
+                price_min: "குறைந்த விலை", price_max: "அதிக விலை",
+                view_item: "விவரம்", add_cart: "பையில் சேர்", add_wish: "விருப்பப்பட்டியல்",
+                sold_out: "விற்றுத் தீர்ந்தது", in_stock: "மீண்டும் இருப்பு உள்ளது",
+                cart_title: "உங்கள் பை", wish_title: "விருப்பப்பட்டியல்", cart_empty: "பை காலியாக உள்ளது",
+                about_title: "உள்ளூர் ஃபேஷனுக்கு ஆதரவு",
+                about_text: "இலங்கையின் சிறந்த ஆடை வடிவமைப்பாளர்களை Nuula.lk உங்களுடன் இணைக்கிறது. WhatsApp மூலம் எளிதாக ஆர்டர் செய்யுங்கள்.",
+                admin_login: "நிர்வாகி உள்நுழைவு",
+                filter_search: "தேடல்", filter_demo: "யாருக்காக", filter_cat: "வகை", 
+                filter_price: "விலை வரம்பு", filter_loc: "இடம்", filter_size: "அளவு", filter_color: "நிறம்"
+            }
+        };
 
         const app = {
             init: async function() {
+                document.getElementById('lang-switcher').value = currentLang;
                 await this.loadData();
                 this.updateCounts();
                 this.renderHome();
+                this.applyLanguage();
             },
 
             loadData: async function() {
@@ -221,6 +307,32 @@
                 products = pData || [];
             },
 
+            // --- LANGUAGE LOGIC ---
+            setLanguage: function(lang) {
+                currentLang = lang;
+                localStorage.setItem('nuula_lang', lang);
+                this.applyLanguage();
+                this.renderHome(); // Re-render to update dynamic content
+            },
+
+            applyLanguage: function() {
+                const t = translations[currentLang];
+                document.querySelectorAll('[data-lang]').forEach(el => {
+                    const key = el.getAttribute('data-lang');
+                    if(t[key]) el.innerText = t[key];
+                });
+                
+                // Update specific inputs/titles directly if they exist
+                if(document.getElementById('search-input')) document.getElementById('search-input').placeholder = t.search_ph;
+                if(document.getElementById('cart-drawer')) document.querySelector('#cart-drawer h3').innerText = t.cart_title;
+                if(document.getElementById('wishlist-drawer')) document.querySelector('#wishlist-drawer h3').innerText = t.wish_title;
+            },
+
+            t: function(key) {
+                return translations[currentLang][key] || key;
+            },
+
+            // --- RENDERING ---
             renderHome: function() {
                 const container = document.getElementById('main-content');
                 window.scrollTo(0,0);
@@ -230,63 +342,138 @@
                 let slideHtml = `<div class="slideshow-container">`;
                 recentItems.forEach((item, idx) => {
                     slideHtml += `<div class="slide ${idx===0?'active':''}" style="background-image: url('${item.image}')">
-                        <div class="slide-content"><h2>${item.name}</h2><p>${item.description.substring(0,60)}...</p><button class="btn btn-primary" onclick="app.openProduct(${item.id})">View Item</button></div>
+                        <div class="slide-content"><h2>${item.name}</h2><p>${item.description.substring(0,60)}...</p><button class="btn btn-primary" onclick="app.openProduct(${item.id})">${this.t('view_item')}</button></div>
                     </div>`;
                 });
                 slideHtml += `</div>`;
 
                 // Shops
-                let shopsHtml = `<div class="container" id="section-shops"><h2 class="section-title">Our Sellers</h2><div class="grid-container">
-                    ${shops.map(s => `<div class="shop-card" onclick="app.renderShopPage(${s.id})"><img src="${s.logo}" class="shop-logo"><div class="shop-name">${s.name}</div><span style="color:#666;">${s.location}</span><br><button class="btn btn-outline" style="margin-top:10px; font-size:0.8rem;">Visit Shop</button></div>`).join('')}
+                let shopsHtml = `<div class="container" id="section-shops"><h2 class="section-title" data-lang="sellers">${this.t('sellers')}</h2><div class="grid-container">
+                    ${shops.map(s => `<div class="shop-card" onclick="app.renderShopPage(${s.id})"><img src="${s.logo}" class="shop-logo"><div class="shop-name">${s.name}</div><span style="color:#666;">${s.location}</span><br><button class="btn btn-outline" style="margin-top:10px; font-size:0.8rem;">${this.t('visit')}</button></div>`).join('')}
                 </div></div>`;
 
-                // Collection Filter
+                // Advanced Collection Filter
                 let collectionHtml = `
                     <div class="container" id="section-collection" style="margin-top: 60px;">
-                        <h2 class="section-title">Latest Collection</h2>
+                        <h2 class="section-title" data-lang="latest">${this.t('latest')}</h2>
+                        
                         <div class="filter-bar">
-                            <input type="text" id="search-input" class="filter-input" placeholder="Search..." onkeyup="app.filterItems()">
-                            <select id="demo-filter" class="filter-input" onchange="app.filterItems()">
-                                <option value="all">Everyone</option>
-                                <option value="Men">Men</option>
-                                <option value="Women">Women</option>
-                                <option value="Kids">Kids</option>
-                                <option value="Unisex">Unisex</option>
-                            </select>
-                            <select id="cat-filter" class="filter-input" onchange="app.filterItems()">
-                                <option value="all">All Categories</option>
-                                <optgroup label="Tops"><option value="T-Shirts">T-Shirts</option><option value="Shirts">Shirts</option><option value="Blouses">Blouses</option><option value="Hoodies">Hoodies</option></optgroup>
-                                <optgroup label="Bottoms"><option value="Jeans">Jeans</option><option value="Trousers">Trousers</option><option value="Skirts">Skirts</option><option value="Shorts">Shorts</option></optgroup>
-                                <optgroup label="Dresses"><option value="Frocks">Frocks</option><option value="Sarees">Sarees</option><option value="Jumpsuits">Jumpsuits</option></optgroup>
-                            </select>
+                            <div class="filter-group">
+                                <label class="filter-label">${this.t('filter_search')}</label>
+                                <input type="text" id="search-input" class="filter-input" placeholder="${this.t('search_ph')}" onkeyup="app.filterItems()">
+                            </div>
+                            
+                            <div class="filter-group">
+                                <label class="filter-label">${this.t('filter_demo')}</label>
+                                <select id="demo-filter" class="filter-input" onchange="app.filterItems()">
+                                    <option value="all">${this.t('all_demo')}</option>
+                                    <option value="Men">${this.t('men')}</option>
+                                    <option value="Women">${this.t('women')}</option>
+                                    <option value="Kids">${this.t('kids')}</option>
+                                    <option value="Unisex">Unisex</option>
+                                </select>
+                            </div>
+
+                            <div class="filter-group">
+                                <label class="filter-label">${this.t('filter_cat')}</label>
+                                <select id="cat-filter" class="filter-input" onchange="app.filterItems()">
+                                    <option value="all">${this.t('all_cat')}</option>
+                                    <optgroup label="Tops"><option value="T-Shirts">T-Shirts</option><option value="Shirts">Shirts</option><option value="Blouses">Blouses</option><option value="Hoodies">Hoodies</option></optgroup>
+                                    <optgroup label="Bottoms"><option value="Jeans">Jeans</option><option value="Trousers">Trousers</option><option value="Skirts">Skirts</option><option value="Shorts">Shorts</option></optgroup>
+                                    <optgroup label="Dresses"><option value="Frocks">Frocks</option><option value="Sarees">Sarees</option><option value="Jumpsuits">Jumpsuits</option></optgroup>
+                                </select>
+                            </div>
+
+                            <div class="filter-group">
+                                <label class="filter-label">${this.t('filter_price')}</label>
+                                <div class="price-row">
+                                    <input type="number" id="price-min" class="filter-input" placeholder="${this.t('price_min')}" onkeyup="app.filterItems()">
+                                    <input type="number" id="price-max" class="filter-input" placeholder="${this.t('price_max')}" onkeyup="app.filterItems()">
+                                </div>
+                            </div>
+
+                            <div class="filter-group">
+                                <label class="filter-label">${this.t('filter_loc')}</label>
+                                <select id="loc-filter" class="filter-input" onchange="app.filterItems()">
+                                    <option value="all">${this.t('all_loc')}</option>
+                                    </select>
+                            </div>
+
+                            <div class="filter-group">
+                                <label class="filter-label">${this.t('filter_size')}</label>
+                                <select id="size-filter" class="filter-input" onchange="app.filterItems()">
+                                    <option value="all">${this.t('all_size')}</option>
+                                    </select>
+                            </div>
+
+                            <div class="filter-group">
+                                <label class="filter-label">${this.t('filter_color')}</label>
+                                <select id="color-filter" class="filter-input" onchange="app.filterItems()">
+                                    <option value="all">${this.t('all_color')}</option>
+                                    </select>
+                            </div>
                         </div>
+
                         <div id="items-grid" class="grid-container">${this.generateItemCards(products)}</div>
                     </div>`;
 
                 container.innerHTML = slideHtml + shopsHtml + collectionHtml;
+                this.populateFilters(); // Populate dynamic dropdowns
                 this.startSlideshow();
+                this.applyLanguage();
             },
 
-            renderShopPage: function(shopId) {
-                const shop = shops.find(s => s.id === shopId);
-                const shopItems = products.filter(p => p.shop_id === shopId);
-                const container = document.getElementById('main-content');
-                window.scrollTo(0,0);
-                const waLink = `https://wa.me/${shop.tel.replace(/\D/g,'')}`;
+            // --- FILTER POPULATION & LOGIC ---
+            populateFilters: function() {
+                // Extract unique Locations from Shops
+                const locations = [...new Set(shops.map(s => s.location))].sort();
+                const locSelect = document.getElementById('loc-filter');
+                if(locSelect) locations.forEach(l => locSelect.add(new Option(l, l)));
+
+                // Extract unique Sizes & Colors from Products
+                const sizes = new Set();
+                const colors = new Set();
+                products.forEach(p => {
+                    if(p.sizes) p.sizes.forEach(s => sizes.add(s));
+                    if(p.colors) p.colors.forEach(c => colors.add(c));
+                });
                 
-                container.innerHTML = `
-                    <div style="background:white; border-bottom:1px solid #eee; padding:40px 0; margin-bottom:40px; text-align:center;">
-                        <img src="${shop.logo}" style="width:120px; height:120px; border-radius:50%; border:4px solid white; box-shadow:0 5px 15px rgba(0,0,0,0.1);">
-                        <h1 style="margin-top:15px;">${shop.name}</h1>
-                        <p style="color:#666; margin-bottom:20px;">📍 ${shop.location}</p>
-                        <a href="${waLink}" target="_blank" class="btn btn-whatsapp"><i class="fa-brands fa-whatsapp"></i> Chat</a>
-                    </div>
-                    <div class="container">
-                        <h3>Shop Collection</h3>
-                        <input type="text" id="shop-search" class="filter-input" style="width:100%; margin-bottom:30px;" placeholder="Search shop..." onkeyup="app.filterShopItems(${shopId})">
-                        <div id="shop-items-grid" class="grid-container">${this.generateItemCards(shopItems)}</div>
-                        <button class="btn btn-outline" onclick="app.renderHome()" style="margin-bottom:50px;">← Back Home</button>
-                    </div>`;
+                const sizeSelect = document.getElementById('size-filter');
+                if(sizeSelect) Array.from(sizes).sort().forEach(s => sizeSelect.add(new Option(s, s)));
+
+                const colorSelect = document.getElementById('color-filter');
+                if(colorSelect) Array.from(colors).sort().forEach(c => colorSelect.add(new Option(c, c)));
+            },
+
+            filterItems: function() {
+                const term = document.getElementById('search-input').value.toLowerCase();
+                const demo = document.getElementById('demo-filter').value;
+                const cat = document.getElementById('cat-filter').value;
+                const min = document.getElementById('price-min').value;
+                const max = document.getElementById('price-max').value;
+                const loc = document.getElementById('loc-filter').value;
+                const size = document.getElementById('size-filter').value;
+                const color = document.getElementById('color-filter').value;
+                
+                const filtered = products.filter(p => {
+                    const shop = shops.find(s => s.id === p.shop_id) || {};
+                    
+                    const mName = p.name.toLowerCase().includes(term);
+                    const mDemo = demo === 'all' || p.demographic === demo;
+                    const mCat = cat === 'all' || p.category === cat;
+                    const mLoc = loc === 'all' || shop.location === loc;
+                    
+                    // Price Check
+                    const mPriceMin = min === '' || p.price >= parseFloat(min);
+                    const mPriceMax = max === '' || p.price <= parseFloat(max);
+
+                    // Array Checks (Size/Color)
+                    const mSize = size === 'all' || (p.sizes && p.sizes.includes(size));
+                    const mColor = color === 'all' || (p.colors && p.colors.includes(color));
+
+                    return mName && mDemo && mCat && mLoc && mPriceMin && mPriceMax && mSize && mColor;
+                });
+                document.getElementById('items-grid').innerHTML = this.generateItemCards(filtered);
             },
 
             generateItemCards: function(list) {
@@ -296,7 +483,7 @@
                     return `
                         <div class="item-card" onclick="app.openProduct(${p.id})">
                             ${p.badge ? `<div class="card-badge">${p.badge}</div>` : ''}
-                            ${p.is_out_of_stock ? `<div class="oos-overlay"><span class="oos-text">Sold Out</span></div>` : ''}
+                            ${p.is_out_of_stock ? `<div class="oos-overlay"><span class="oos-text">${this.t('sold_out')}</span></div>` : ''}
                             <div class="item-img-wrap"><img src="${p.image}" class="item-img"></div>
                             <div class="item-details">
                                 <div class="item-shop-name">${shop.name}</div>
@@ -305,26 +492,6 @@
                             </div>
                         </div>`;
                 }).join('');
-            },
-
-            filterItems: function() {
-                const term = document.getElementById('search-input').value.toLowerCase();
-                const demo = document.getElementById('demo-filter').value;
-                const cat = document.getElementById('cat-filter').value;
-                
-                const filtered = products.filter(p => {
-                    const mName = p.name.toLowerCase().includes(term);
-                    const mDemo = demo === 'all' || p.demographic === demo;
-                    const mCat = cat === 'all' || p.category === cat;
-                    return mName && mDemo && mCat;
-                });
-                document.getElementById('items-grid').innerHTML = this.generateItemCards(filtered);
-            },
-            
-            filterShopItems: function(sid) {
-                const term = document.getElementById('shop-search').value.toLowerCase();
-                const filtered = products.filter(p => p.shop_id === sid && p.name.toLowerCase().includes(term));
-                document.getElementById('shop-items-grid').innerHTML = this.generateItemCards(filtered);
             },
 
             // --- PRODUCT MODAL ---
@@ -352,12 +519,12 @@
                         </div>
 
                         ${isOOS ? 
-                            `<div style="background:#fcecec; color:#d32f2f; padding:10px; margin-bottom:15px; border:1px solid #f5c6c6; border-radius:4px;">Currently Out of Stock. Add to wishlist to track availability.</div>
-                             <button class="btn btn-wishlist" style="width:100%;" onclick="app.addToWishlist(${p.id})"><i class="fa-regular fa-heart"></i> Add to Wishlist</button>` 
+                            `<div style="background:#fcecec; color:#d32f2f; padding:10px; margin-bottom:15px; border:1px solid #f5c6c6; border-radius:4px;">${this.t('sold_out')}</div>
+                             <button class="btn btn-wishlist" style="width:100%;" onclick="app.addToWishlist(${p.id})"><i class="fa-regular fa-heart"></i> ${this.t('add_wish')}</button>` 
                             : 
                             `<div style="display:flex; align-items:center;">
                                 <input type="number" id="qty-select" class="qty-input" value="1" min="1">
-                                <button class="btn btn-primary" style="flex:1;" onclick="app.addToCart(${p.id})">Add to Bag</button>
+                                <button class="btn btn-primary" style="flex:1;" onclick="app.addToCart(${p.id})">${this.t('add_cart')}</button>
                              </div>`
                         }
                     </div>`;
@@ -420,7 +587,7 @@
 
             renderCart: function() {
                 const container = document.getElementById('cart-body');
-                if(cart.length === 0) { container.innerHTML = '<p style="text-align:center; padding:20px; color:#999;">Bag is empty.</p>'; return; }
+                if(cart.length === 0) { container.innerHTML = `<p style="text-align:center; padding:20px; color:#999;">${this.t('cart_empty')}</p>`; return; }
                 
                 const grouped = {};
                 cart.forEach((item, index) => {
@@ -469,8 +636,8 @@
                                 <div style="font-weight:600;">${p.name}</div>
                                 <div style="font-size:0.85rem;">Rs. ${p.price.toLocaleString()}</div>
                                 ${inStock 
-                                    ? `<div style="color:green; font-size:0.8rem; font-weight:bold;">Back in Stock!</div><button class="btn btn-primary" style="padding:4px 10px; font-size:0.7rem; margin-top:5px;" onclick="app.openProduct(${p.id})">Move to Bag</button>` 
-                                    : `<div style="color:red; font-size:0.8rem;">Still Out of Stock</div>`
+                                    ? `<div style="color:green; font-size:0.8rem; font-weight:bold;">${this.t('in_stock')}</div><button class="btn btn-primary" style="padding:4px 10px; font-size:0.7rem; margin-top:5px;" onclick="app.openProduct(${p.id})">${this.t('add_cart')}</button>` 
+                                    : `<div style="color:red; font-size:0.8rem;">${this.t('sold_out')}</div>`
                                 }
                             </div>
                             <i class="fa-solid fa-trash" style="color:#999; cursor:pointer;" onclick="app.removeFromWishlist(${idx})"></i>
@@ -480,6 +647,34 @@
                 container.innerHTML = html;
             },
             
+            renderShopPage: function(shopId) {
+                const shop = shops.find(s => s.id === shopId);
+                const shopItems = products.filter(p => p.shop_id === shopId);
+                const container = document.getElementById('main-content');
+                window.scrollTo(0,0);
+                const waLink = `https://wa.me/${shop.tel.replace(/\D/g,'')}`;
+                
+                container.innerHTML = `
+                    <div style="background:white; border-bottom:1px solid #eee; padding:40px 0; margin-bottom:40px; text-align:center;">
+                        <img src="${shop.logo}" style="width:120px; height:120px; border-radius:50%; border:4px solid white; box-shadow:0 5px 15px rgba(0,0,0,0.1);">
+                        <h1 style="margin-top:15px;">${shop.name}</h1>
+                        <p style="color:#666; margin-bottom:20px;">📍 ${shop.location}</p>
+                        <a href="${waLink}" target="_blank" class="btn btn-whatsapp"><i class="fa-brands fa-whatsapp"></i> Chat</a>
+                    </div>
+                    <div class="container">
+                        <h3>Shop Collection</h3>
+                        <input type="text" id="shop-search" class="filter-input" style="width:100%; margin-bottom:30px;" placeholder="${this.t('search_ph')}" onkeyup="app.filterShopItems(${shopId})">
+                        <div id="shop-items-grid" class="grid-container">${this.generateItemCards(shopItems)}</div>
+                        <button class="btn btn-outline" onclick="app.renderHome()" style="margin-bottom:50px;">← Back Home</button>
+                    </div>`;
+            },
+
+            filterShopItems: function(sid) {
+                const term = document.getElementById('shop-search').value.toLowerCase();
+                const filtered = products.filter(p => p.shop_id === sid && p.name.toLowerCase().includes(term));
+                document.getElementById('shop-items-grid').innerHTML = this.generateItemCards(filtered);
+            },
+
             startSlideshow: function() {
                 let current = 0; const slides = document.querySelectorAll('.slide');
                 if(!slides.length) return;
