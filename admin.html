@@ -53,13 +53,20 @@
         .view.active { display: block; }
         .preview-img { width: 100px; height: 100px; object-fit: cover; border: 1px solid #ddd; margin-top: 10px; display: none; }
         
-        /* Loading Overlay */
-        #loader { display: none; position: fixed; inset: 0; background: rgba(255,255,255,0.8); z-index: 999; justify-content: center; align-items: center; font-weight: bold; }
+        /* MODERN PRELOADER */
+        #loader { display: none; position: fixed; inset: 0; background: rgba(255,255,255,0.9); z-index: 9999; justify-content: center; align-items: center; flex-direction: column; }
+        .spinner { width: 50px; height: 50px; border: 4px solid #f3f3f3; border-top: 4px solid var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; margin-bottom: 15px; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .loader-text { font-weight: 600; color: var(--primary); letter-spacing: 1px; animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0% { opacity: 0.6; } 50% { opacity: 1; } 100% { opacity: 0.6; } }
     </style>
 </head>
 <body>
 
-    <div id="loader">Processing...</div>
+    <div id="loader">
+        <div class="spinner"></div>
+        <div class="loader-text">NUULA ADMIN</div>
+    </div>
 
     <div class="sidebar">
         <a href="index.html" class="logo">Nuula<span>.lk</span></a>
@@ -75,18 +82,22 @@
         <div id="view-shops" class="view active">
             <h2>🏪 Manage Shops</h2>
             <div class="card">
-                <h3>Add New Shop</h3>
+                <h3 id="shop-form-title">Add New Shop</h3>
                 <div class="form-grid">
                     <div class="form-group"><label>Shop Name</label><input id="s-name" placeholder="Fashion House"></div>
-                    <div class="form-group"><label>Location</label><input id="s-loc" placeholder="Nugegoda"></div>
+                    <div class="form-group"><label>Location (City)</label><input id="s-loc" placeholder="Nugegoda"></div>
                     <div class="form-group"><label>WhatsApp (94...)</label><input id="s-tel" placeholder="94770000000"></div>
+                    <div class="form-group"><label>Google Map Link</label><input id="s-map-link" placeholder="https://maps.app.goo.gl/..."></div>
                     <div class="form-group"><label>Logo</label>
                         <input type="file" onchange="handleFile(this, 's-logo-val', 's-logo-preview')">
                         <input type="hidden" id="s-logo-val">
                         <img id="s-logo-preview" class="preview-img">
                     </div>
                 </div>
-                <button class="btn" onclick="addShop()">Create Shop</button>
+                <div>
+                    <button id="btn-save-shop" class="btn" onclick="saveShop()">Create Shop</button>
+                    <button id="btn-cancel-shop" class="btn btn-cancel" onclick="cancelShopEdit()">Cancel Update</button>
+                </div>
             </div>
             <div class="card">
                 <h3>Current Shops</h3>
@@ -223,7 +234,8 @@
         const _supabase = createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_KEY);
         let shops = [];
         let products = [];
-        let editingProductId = null; // Track which product is being edited
+        let editingProductId = null;
+        let editingShopId = null; // State for shop editing
 
         function loading(show) {
             document.getElementById('loader').style.display = show ? 'flex' : 'none';
@@ -257,7 +269,6 @@
         function handleFile(input, valId, prevId) {
             const file = input.files[0];
             if(file) {
-                // Warning: Supabase rows have a size limit. Large images might fail.
                 const reader = new FileReader();
                 reader.onload = function(e) {
                     document.getElementById(valId).value = e.target.result;
@@ -280,34 +291,90 @@
         }
 
         // --- SHOP LOGIC ---
-        async function addShop() {
+        async function saveShop() {
             const name = document.getElementById('s-name').value;
             const loc = document.getElementById('s-loc').value;
             const tel = document.getElementById('s-tel').value;
-            const logo = document.getElementById('s-logo-val').value || 'https://via.placeholder.com/100';
+            const map = document.getElementById('s-map-link').value;
+            let logo = document.getElementById('s-logo-val').value;
             
             if(!name) return alert('Name required');
+            if(!logo && !editingShopId) logo = 'https://via.placeholder.com/100'; // Default only for new
             
             loading(true);
-            const { data, error } = await _supabase.from('shops').insert([{name, location:loc, tel, logo}]);
+            let error = null;
+            const payload = { name, location: loc, tel, map_link: map };
+            if(logo) payload.logo = logo; // Only update logo if provided
+
+            if(editingShopId) {
+                // Update
+                const { error: uErr } = await _supabase.from('shops').update(payload).eq('id', editingShopId);
+                error = uErr;
+            } else {
+                // Insert
+                if(!payload.logo) payload.logo = 'https://via.placeholder.com/100';
+                const { error: iErr } = await _supabase.from('shops').insert([payload]);
+                error = iErr;
+            }
+            
             loading(false);
             
             if(error) {
                 alert("Error: " + error.message);
             } else {
-                alert('Shop Added'); 
-                document.getElementById('s-name').value = ""; // Clear input
+                alert(editingShopId ? 'Shop Updated' : 'Shop Added'); 
+                cancelShopEdit();
                 loadData();
             }
         }
         
+        function editShop(id) {
+            const s = shops.find(x => x.id === id);
+            if(!s) return;
+            
+            editingShopId = id;
+            document.getElementById('s-name').value = s.name;
+            document.getElementById('s-loc').value = s.location;
+            document.getElementById('s-tel').value = s.tel;
+            document.getElementById('s-map-link').value = s.map_link || '';
+            document.getElementById('s-logo-val').value = s.logo;
+            
+            const img = document.getElementById('s-logo-preview');
+            img.src = s.logo;
+            img.style.display = 'block';
+
+            // Switch UI
+            document.getElementById('shop-form-title').innerText = "Edit Shop";
+            document.getElementById('btn-save-shop').innerText = "Update Shop";
+            document.getElementById('btn-cancel-shop').style.display = "inline-block";
+            
+            document.querySelector('.card').scrollIntoView({behavior:'smooth'});
+        }
+
+        function cancelShopEdit() {
+            editingShopId = null;
+            document.getElementById('s-name').value = "";
+            document.getElementById('s-loc').value = "";
+            document.getElementById('s-tel').value = "";
+            document.getElementById('s-map-link').value = "";
+            document.getElementById('s-logo-val').value = "";
+            document.getElementById('s-logo-preview').style.display = "none";
+
+            document.getElementById('shop-form-title').innerText = "Add New Shop";
+            document.getElementById('btn-save-shop').innerText = "Create Shop";
+            document.getElementById('btn-cancel-shop').style.display = "none";
+        }
+
         async function deleteShop(id) {
             if(confirm('Delete shop and all its items?')) {
                 loading(true);
                 const { error } = await _supabase.from('shops').delete().eq('id', id);
                 loading(false);
                 if(error) alert(error.message);
-                else loadData();
+                else {
+                    if(editingShopId === id) cancelShopEdit();
+                    loadData();
+                }
             }
         }
 
@@ -318,20 +385,21 @@
                     <td><img src="${s.logo}" style="width:30px; height:30px; border-radius:50%; object-fit:cover;"></td>
                     <td>${s.name}</td>
                     <td>${s.location}</td>
-                    <td><button class="btn btn-delete" onclick="deleteShop(${s.id})">Delete</button></td>
+                    <td>
+                        <button class="btn btn-edit" onclick="editShop(${s.id})">Edit</button>
+                        <button class="btn btn-delete" onclick="deleteShop(${s.id})">Delete</button>
+                    </td>
                 </tr>`).join('');
         }
 
         // --- PRODUCT LOGIC ---
         function populateShopSelect() {
             const sel = document.getElementById('p-shop-select');
-            // Keep existing selection if editing
             const currentVal = sel.value; 
             sel.innerHTML = shops.map(s => `<option value="${s.id}">${s.name} (${s.location})</option>`).join('');
             if(currentVal) sel.value = currentVal;
         }
 
-        // Combined function for Add and Update
         async function saveProduct() {
             const shopId = document.getElementById('p-shop-select').value;
             const name = document.getElementById('p-name').value;
@@ -346,9 +414,6 @@
             const isOOS = document.getElementById('p-oos').checked;
 
             if(!name || !price) return alert('Name and Price required');
-
-            // If img is empty during update, it means user kept the old one. We need logic to handle that inside specific flow, 
-            // but here we just check if it's empty string.
             if(!img) img = 'https://via.placeholder.com/300';
 
             const payload = {
@@ -359,11 +424,9 @@
             let error = null;
 
             if(editingProductId) {
-                // UPDATE
                 const { error: updateError } = await _supabase.from('products').update(payload).eq('id', editingProductId);
                 error = updateError;
             } else {
-                // INSERT
                 const { error: insertError } = await _supabase.from('products').insert([payload]);
                 error = insertError;
             }
@@ -374,7 +437,7 @@
                 alert("Error saving product: " + error.message);
             } else {
                 alert(editingProductId ? 'Product Updated' : 'Product Added'); 
-                cancelEdit(); // Reset form
+                cancelEdit();
                 loadData();
             }
         }
@@ -382,10 +445,8 @@
         function editProduct(id) {
             const p = products.find(prod => prod.id === id);
             if(!p) return;
-
             editingProductId = id;
 
-            // Populate Form
             document.getElementById('p-shop-select').value = p.shop_id;
             document.getElementById('p-name').value = p.name;
             document.getElementById('p-price').value = p.price;
@@ -399,25 +460,20 @@
             document.getElementById('p-badge').value = p.badge;
             document.getElementById('p-oos').checked = p.is_out_of_stock;
 
-            // Image handling
             document.getElementById('p-img-val').value = p.image;
             const imgPreview = document.getElementById('p-img-preview');
             imgPreview.src = p.image;
             imgPreview.style.display = 'block';
 
-            // Change Interface to Edit Mode
             document.getElementById('form-title').innerText = "Edit Product";
             document.getElementById('btn-save').innerText = "Update Item";
             document.getElementById('btn-cancel').style.display = "inline-block";
             
-            // Scroll to form
-            document.querySelector('.card').scrollIntoView({behavior: 'smooth'});
+            document.querySelector('#view-products .card').scrollIntoView({behavior: 'smooth'});
         }
 
         function cancelEdit() {
             editingProductId = null;
-            
-            // Clear inputs
             document.getElementById('p-name').value = "";
             document.getElementById('p-price').value = "";
             document.getElementById('p-sizes').value = "";
@@ -428,7 +484,6 @@
             document.getElementById('p-img-val').value = "";
             document.getElementById('p-img-preview').style.display = "none";
             
-            // Reset UI
             document.getElementById('form-title').innerText = "Add Product";
             document.getElementById('btn-save').innerText = "Add Item";
             document.getElementById('btn-cancel').style.display = "none";
@@ -441,7 +496,7 @@
                 loading(false);
                 if(error) alert(error.message);
                 else {
-                    if(editingProductId === id) cancelEdit(); // If deleting the item currently being edited
+                    if(editingProductId === id) cancelEdit();
                     loadData();
                 }
             }
