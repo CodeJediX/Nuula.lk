@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard | Nuula.lk</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="config.js"></script>
+    
+    <style>
+        :root { --primary: #1a1a1a; --accent: #FF6B6B; --bg: #f3f4f6; }
+        body { font-family: 'Poppins', sans-serif; background: var(--bg); display: flex; height: 100vh; margin: 0; }
+        * { box-sizing: border-box; }
+        
+        .sidebar { width: 250px; background: var(--primary); color: white; padding: 20px; display: flex; flex-direction: column; }
+        .logo { font-size: 1.5rem; font-weight: 700; margin-bottom: 40px; color: white; text-decoration: none; }
+        .menu-item { padding: 12px; margin-bottom: 5px; cursor: pointer; border-radius: 5px; color: #aaa; transition: 0.2s; }
+        .menu-item:hover, .menu-item.active { background: rgba(255,255,255,0.1); color: var(--accent); }
+        
+        .main { flex: 1; padding: 30px; overflow-y: auto; }
+        .card { background: white; padding: 25px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 25px; }
+        
+        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; margin-bottom: 20px; }
+        .form-group { display: flex; flex-direction: column; gap: 5px; }
+        label { font-size: 0.8rem; font-weight: 600; text-transform: uppercase; color: #666; }
+        input, select, textarea { padding: 10px; border: 1px solid #ddd; border-radius: 5px; }
+        
+        /* Chips for Suggestions */
+        .chip-container { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 5px; }
+        .chip { background: #eee; padding: 4px 10px; border-radius: 15px; font-size: 0.75rem; cursor: pointer; border: 1px solid #ddd; transition: 0.2s; }
+        .chip:hover { background: var(--primary); color: white; }
+        
+        .btn { padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; background: var(--primary); color: white; font-weight: 500; }
+        .btn:hover { background: var(--accent); }
+        .btn-delete { background: #fee2e2; color: #ef4444; }
+        
+        /* Toggle Switch */
+        .switch { position: relative; display: inline-block; width: 50px; height: 24px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 24px; }
+        .slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; }
+        input:checked + .slider { background-color: var(--accent); }
+        input:checked + .slider:before { transform: translateX(26px); }
+
+        table { width: 100%; border-collapse: collapse; font-size: 0.9rem; margin-top: 15px; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #eee; }
+        
+        .view { display: none; }
+        .view.active { display: block; }
+        .preview-img { width: 100px; height: 100px; object-fit: cover; border: 1px solid #ddd; margin-top: 10px; display: none; }
+    </style>
+</head>
+<body>
+
+    <div class="sidebar">
+        <a href="index.html" class="logo">Nuula<span>.lk</span></a>
+        <div class="menu-item active" onclick="showView('shops')">Manage Shops</div>
+        <div class="menu-item" onclick="showView('products')">Manage Products</div>
+        <div style="margin-top:auto;">
+            <a href="index.html" class="menu-item">← Back to Site</a>
+        </div>
+    </div>
+
+    <div class="main">
+        
+        <div id="view-shops" class="view active">
+            <h2>🏪 Manage Shops</h2>
+            <div class="card">
+                <h3>Add New Shop</h3>
+                <div class="form-grid">
+                    <div class="form-group"><label>Shop Name</label><input id="s-name" placeholder="Fashion House"></div>
+                    <div class="form-group"><label>Location</label><input id="s-loc" placeholder="Nugegoda"></div>
+                    <div class="form-group"><label>WhatsApp (94...)</label><input id="s-tel" placeholder="94770000000"></div>
+                    <div class="form-group"><label>Logo</label>
+                        <input type="file" onchange="handleFile(this, 's-logo-val', 's-logo-preview')">
+                        <input type="hidden" id="s-logo-val">
+                        <img id="s-logo-preview" class="preview-img">
+                    </div>
+                </div>
+                <button class="btn" onclick="addShop()">Create Shop</button>
+            </div>
+            <div class="card">
+                <h3>Current Shops</h3>
+                <table id="shops-table"><thead><tr><th>Logo</th><th>Name</th><th>Location</th><th>Action</th></tr></thead><tbody></tbody></table>
+            </div>
+        </div>
+
+        <div id="view-products" class="view">
+            <h2>👗 Manage Inventory</h2>
+            <div class="card">
+                <h3>Add Product</h3>
+                <div class="form-group" style="margin-bottom:15px;">
+                    <label>Select Shop Owner</label>
+                    <select id="p-shop-select"></select>
+                </div>
+                
+                <div class="form-grid">
+                    <div class="form-group"><label>Product Name</label><input id="p-name"></div>
+                    <div class="form-group"><label>Price (LKR)</label><input id="p-price" type="number"></div>
+                    
+                    <div class="form-group"><label>Demographic</label>
+                        <select id="p-demo">
+                            <option value="Unisex">Unisex</option>
+                            <option value="Men">Men</option>
+                            <option value="Women">Women</option>
+                            <option value="Kids">Kids</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group"><label>Category</label>
+                        <select id="p-cat">
+                            <optgroup label="Tops">
+                                <option value="T-Shirts">T-Shirts</option>
+                                <option value="Polo Shirts">Polo Shirts</option>
+                                <option value="Shirts">Shirts</option>
+                                <option value="Blouses">Blouses</option>
+                                <option value="Hoodies">Hoodies</option>
+                                <option value="Crop Tops">Crop Tops</option>
+                            </optgroup>
+                            <optgroup label="Bottoms">
+                                <option value="Jeans">Jeans</option>
+                                <option value="Trousers">Trousers</option>
+                                <option value="Chinos">Chinos</option>
+                                <option value="Leggings">Leggings</option>
+                                <option value="Skirts">Skirts</option>
+                                <option value="Shorts">Shorts</option>
+                            </optgroup>
+                            <optgroup label="Outerwear">
+                                <option value="Jackets">Jackets</option>
+                                <option value="Coats">Coats</option>
+                                <option value="Blazers">Blazers</option>
+                            </optgroup>
+                            <optgroup label="Full Body / Traditional">
+                                <option value="Dresses">Dresses</option>
+                                <option value="Jumpsuits">Jumpsuits</option>
+                                <option value="Suits">Suits</option>
+                                <option value="Frocks">Frocks</option>
+                                <option value="Sarees">Sarees</option>
+                            </optgroup>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Sizes</label>
+                        <input id="p-sizes" placeholder="Type or select...">
+                        <div class="chip-container">
+                            <span class="chip" onclick="appendChip('p-sizes','XS')">XS</span>
+                            <span class="chip" onclick="appendChip('p-sizes','S')">S</span>
+                            <span class="chip" onclick="appendChip('p-sizes','M')">M</span>
+                            <span class="chip" onclick="appendChip('p-sizes','L')">L</span>
+                            <span class="chip" onclick="appendChip('p-sizes','XL')">XL</span>
+                            <span class="chip" onclick="appendChip('p-sizes','2XL')">2XL</span>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Colors</label>
+                        <input id="p-colors" placeholder="Type or select...">
+                        <div class="chip-container">
+                            <span class="chip" onclick="appendChip('p-colors','Black')">Black</span>
+                            <span class="chip" onclick="appendChip('p-colors','White')">White</span>
+                            <span class="chip" onclick="appendChip('p-colors','Blue')">Blue</span>
+                            <span class="chip" onclick="appendChip('p-colors','Red')">Red</span>
+                            <span class="chip" onclick="appendChip('p-colors','Pink')">Pink</span>
+                            <span class="chip" onclick="appendChip('p-colors','Yellow')">Yellow</span>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Product Image (Device Upload)</label>
+                        <input type="file" onchange="handleFile(this, 'p-img-val', 'p-img-preview')">
+                        <input type="hidden" id="p-img-val">
+                        <img id="p-img-preview" class="preview-img">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Badge (Optional)</label>
+                        <input id="p-badge" placeholder="Sale, New">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Stock Status</label>
+                        <div style="display:flex; align-items:center; gap:10px;">
+                            <label class="switch">
+                                <input type="checkbox" id="p-oos">
+                                <span class="slider"></span>
+                            </label>
+                            <span>Mark as Out of Stock</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-group" style="margin-bottom:15px;">
+                    <label>Description</label>
+                    <textarea id="p-desc" rows="3"></textarea>
+                </div>
+                <button class="btn" onclick="addProduct()">Add Item</button>
+            </div>
+
+            <div class="card">
+                <h3>All Items</h3>
+                <table id="products-table"><thead><tr><th>Img</th><th>Name</th><th>Shop</th><th>Status</th><th>Action</th></tr></thead><tbody></tbody></table>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        const { createClient } = supabase;
+        const _supabase = createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_KEY);
+        let shops = [];
+        let products = [];
+
+        function showView(id) {
+            document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+            document.querySelectorAll('.menu-item').forEach(m => m.classList.remove('active'));
+            document.getElementById('view-'+id).classList.add('active');
+            loadData();
+        }
+
+        async function loadData() {
+            let { data: s } = await _supabase.from('shops').select('*');
+            let { data: p } = await _supabase.from('products').select('*').order('id', {ascending:false});
+            shops = s || [];
+            products = p || [];
+            renderShops();
+            renderProducts();
+            populateShopSelect();
+        }
+
+        // --- HELPER: FILE TO BASE64 ---
+        function handleFile(input, valId, prevId) {
+            const file = input.files[0];
+            if(file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById(valId).value = e.target.result;
+                    const img = document.getElementById(prevId);
+                    img.src = e.target.result;
+                    img.style.display = 'block';
+                }
+                reader.readAsDataURL(file);
+            }
+        }
+
+        // --- HELPER: CHIPS ---
+        function appendChip(inputId, val) {
+            const el = document.getElementById(inputId);
+            let current = el.value.split(',').map(s=>s.trim()).filter(s=>s!=='');
+            if(!current.includes(val)) {
+                current.push(val);
+                el.value = current.join(', ');
+            }
+        }
+
+        // --- SHOP LOGIC ---
+        async function addShop() {
+            const name = document.getElementById('s-name').value;
+            const loc = document.getElementById('s-loc').value;
+            const tel = document.getElementById('s-tel').value;
+            const logo = document.getElementById('s-logo-val').value || 'https://via.placeholder.com/100';
+            
+            if(!name) return alert('Name required');
+            await _supabase.from('shops').insert([{name, location:loc, tel, logo}]);
+            alert('Shop Added'); loadData();
+        }
+        
+        async function deleteShop(id) {
+            if(confirm('Delete shop and all its items?')) {
+                await _supabase.from('shops').delete().eq('id', id);
+                loadData();
+            }
+        }
+
+        function renderShops() {
+            const tbody = document.querySelector('#shops-table tbody');
+            tbody.innerHTML = shops.map(s => `
+                <tr>
+                    <td><img src="${s.logo}" style="width:30px; height:30px; border-radius:50%;"></td>
+                    <td>${s.name}</td>
+                    <td>${s.location}</td>
+                    <td><button class="btn btn-delete" onclick="deleteShop(${s.id})">Delete</button></td>
+                </tr>`).join('');
+        }
+
+        // --- PRODUCT LOGIC ---
+        function populateShopSelect() {
+            const sel = document.getElementById('p-shop-select');
+            sel.innerHTML = shops.map(s => `<option value="${s.id}">${s.name} (${s.location})</option>`).join('');
+        }
+
+        async function addProduct() {
+            const shopId = document.getElementById('p-shop-select').value;
+            const name = document.getElementById('p-name').value;
+            const price = document.getElementById('p-price').value;
+            const demo = document.getElementById('p-demo').value;
+            const cat = document.getElementById('p-cat').value;
+            const img = document.getElementById('p-img-val').value || 'https://via.placeholder.com/300';
+            const sizes = document.getElementById('p-sizes').value.split(',').map(s=>s.trim()).filter(s=>s);
+            const colors = document.getElementById('p-colors').value.split(',').map(s=>s.trim()).filter(s=>s);
+            const desc = document.getElementById('p-desc').value;
+            const badge = document.getElementById('p-badge').value;
+            const isOOS = document.getElementById('p-oos').checked;
+
+            if(!name || !price) return alert('Name and Price required');
+
+            await _supabase.from('products').insert([{
+                shop_id: shopId, name, price: parseFloat(price), category: cat, demographic: demo, image: img, sizes, colors, description: desc, badge, is_out_of_stock: isOOS
+            }]);
+            alert('Product Added'); loadData();
+        }
+
+        async function deleteProduct(id) {
+            if(confirm('Delete item?')) {
+                await _supabase.from('products').delete().eq('id', id);
+                loadData();
+            }
+        }
+        
+        // Function to toggle stock directly from table
+        async function toggleStock(id, currentStatus) {
+            await _supabase.from('products').update({ is_out_of_stock: !currentStatus }).eq('id', id);
+            loadData();
+        }
+
+        function renderProducts() {
+            const tbody = document.querySelector('#products-table tbody');
+            tbody.innerHTML = products.map(p => {
+                const s = shops.find(x => x.id === p.shop_id) || {name:'?'};
+                return `
+                <tr>
+                    <td><img src="${p.image}" style="width:30px;"></td>
+                    <td>${p.name}</td>
+                    <td>${s.name}</td>
+                    <td><span style="color:${p.is_out_of_stock?'red':'green'}; font-weight:bold; cursor:pointer;" onclick="toggleStock(${p.id}, ${p.is_out_of_stock})">${p.is_out_of_stock ? 'Out of Stock' : 'In Stock'}</span></td>
+                    <td><button class="btn btn-delete" onclick="deleteProduct(${p.id})">Delete</button></td>
+                </tr>`;
+            }).join('');
+        }
+
+        loadData();
+    </script>
+</body>
+</html>
